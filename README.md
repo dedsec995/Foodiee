@@ -62,7 +62,7 @@ For this indie version of Foodie, I am using simple `JSON` files for inventory a
     # Judgment Keys
     JUDGMENT_API_KEY=the_api_key
     JUDGMENT_ORG_ID=the_org_id
-
+    PROJECT_NAME=foodiee
     # Groq Client Key
     GROQ_API_KEY=your_groq_key
     ```

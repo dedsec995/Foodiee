@@ -15,7 +15,8 @@ from rich.text import Text
 load_dotenv()
 
 # ----------------- Let's Judge -------------
-judgment = Tracer(project_name="foodiee")
+print(os.getenv("PROJECT_NAME"))
+judgment = Tracer(project_name=os.getenv("PROJECT_NAME"))
 handler = JudgevalCallbackHandler(judgment)
 
 def main():
