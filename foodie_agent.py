@@ -29,15 +29,16 @@ class Recipe(BaseModel):
     instructions: List[str] = Field(description="A list of instructions for the recipe.")
 
 class ShoppingList(BaseModel):
-    """Represents a shopping list."""
-    missing_items: List[str] = Field(description="A list of missing items to be added to the shopping list.")
+    """Represents a shopping list with formatted items."""
+    shopping_list: dict = Field(description="A dictionary of missing items with their quantities and units, e.g. {'flour': {'quantity': 500, 'unit': 'g'}}")
+
 
 # ------------------ STATE ------------------
 
 class AgentState(TypedDict):
     messages: Annotated[List[BaseMessage], lambda x, y: x + y]
     inventory: dict
-    shopping_list: list
+    shopping_list: dict
     servings: int
 
 # ------------------ NODES ------------------
@@ -58,8 +59,11 @@ def inventory_manager(state: AgentState):
     recipe_tool_call = state["messages"][-1].tool_calls[0]
     recipe_ingredients = recipe_tool_call["args"]["ingredients"]
 
-    inventory_items = inventory.get("items", [])
-    missing_items = [item for item in recipe_ingredients if item not in inventory_items]
+    inventory_items = inventory.get("items", {}).keys()
+    missing_items = {}
+    for item, quantity in recipe_ingredients.items():
+        if item not in inventory_items:
+            missing_items[item] = quantity
 
     if missing_items:
         state["messages"].append(ToolMessage(tool_call_id=recipe_tool_call["id"], content=json.dumps({"missing_items": missing_items})))
@@ -99,17 +103,25 @@ def shopping_list_manager(state: AgentState):
     missing_items_data = json.loads(last_message.content)
     missing_items = missing_items_data["missing_items"]
 
-    with open("shopping_list.json", "w") as f:
-        json.dump({"shopping_list": missing_items}, f, indent=4)
+    llm_with_tools = llm.bind_tools([ShoppingList])
+    prompt = f"Please format the following list of missing ingredients into a structured shopping list with quantities and units. For each item, separate the quantity and the unit. If you can't determine a quantity or unit, you can make a reasonable assumption or leave it as a string. Missing items: {json.dumps(missing_items)}"
+    response = llm_with_tools.invoke(prompt)
+    state["messages"].append(response)
 
-    state["shopping_list"] = missing_items
+    shopping_list_tool_call = response.tool_calls[0]
+    formatted_shopping_list = shopping_list_tool_call["args"]["shopping_list"]
+
+    with open("shopping_list.json", "w") as f:
+        json.dump(formatted_shopping_list, f, indent=4)
+
+    state["shopping_list"] = formatted_shopping_list
     return state
 
 def printer(state: AgentState):
     """Prints the final output."""
     if state.get("shopping_list"):
         print("\nShopping list created in shopping_list.json")
-        print(state["shopping_list"])
+        print(json.dumps(state["shopping_list"], indent=4))
     else:
         last_message = state["messages"][-1]
         recipe_data = json.loads(last_message.content)
@@ -132,6 +144,7 @@ workflow.set_entry_point("recipe_fetcher")
 workflow.add_edge("recipe_fetcher", "inventory_manager")
 workflow.add_edge("shopping_list_manager", "printer")
 workflow.add_edge("recipe_scaler", "printer")
+workflow.add_edge("printer", END)
 
 
 def should_continue(state: AgentState):
