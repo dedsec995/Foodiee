@@ -4,3 +4,6 @@ langchain
 dotenv
 duckduckgo-search
 langchain-community
+rich
+judgeval
+langgraph-checkpoint-sqlite 
