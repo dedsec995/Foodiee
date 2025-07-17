@@ -11,6 +11,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langchain_core.runnables.graph_mermaid import draw_mermaid_png
 from dotenv import load_dotenv
+from langchain_community.tools import DuckDuckGoSearchRun
 
 load_dotenv()
 
@@ -45,8 +46,19 @@ class AgentState(TypedDict):
 
 def recipe_fetcher(state: AgentState):
     """Fetches a recipe based on the user's request."""
+    search = DuckDuckGoSearchRun()
+    dish_query = state["messages"][0]
+    search_results = search.run(f"recipe for {dish_query}")
+
+    prompt = f"""Based on the following search results, please provide a recipe.
+Search results:
+{search_results}
+
+User's request: {dish_query}
+"""
+
     llm_with_tools = llm.bind_tools([Recipe])
-    response = llm_with_tools.invoke(state["messages"])
+    response = llm_with_tools.invoke(prompt)
     state["messages"].append(response)
     return state
 

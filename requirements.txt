@@ -1,4 +1,6 @@
-langgraph
-langchain-core
 langchain-groq
+langgraph
+langchain
+dotenv
 duckduckgo-search
+langchain-community
