@@ -19,6 +19,7 @@ judgment = Tracer(project_name="foodiee")
 handler = JudgevalCallbackHandler(judgment)
 
 def main():
+    """ The Main Function that initialize and Invokes the Graph """
     console = Console()
 
     console.print(Panel(Text("Welcome to Foodie!", justify="center", style="bold green"), title="[bold]Foodie AI Assistant[/bold]", border_style="green"))
@@ -37,12 +38,6 @@ def main():
     with SqliteSaver.from_conn_string(":memory:") as memory:
         app = workflow.compile(checkpointer=memory)
 
-        try:
-            mermaid_code = app.get_graph().draw_mermaid()
-            draw_mermaid_png(mermaid_syntax=mermaid_code, output_file_path="graph.png")
-        except Exception as e:
-            console.print(f"[bold red]Error generating graph: {e}[/bold red]")
-
         initial_state = {
             "messages": [f"Prepare a recipe for {dish}."],
             "servings": servings
@@ -53,8 +48,6 @@ def main():
 
     console.print("\n[bold green]Execution Details:[/bold green]")
     console.print(f"  [bold]Executed Nodes:[/bold] {handler.executed_nodes}")
-    console.print(f"  [bold]Executed Tools:[/bold] {handler.executed_tools}")
-    console.print(f"  [bold]Node/Tool Flow:[/bold] {handler.executed_node_tools}")
 
 
 if __name__ == "__main__":

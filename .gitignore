@@ -6,7 +6,6 @@ __pycache__/
 # Playground
 playground/
 GEMINI.md
-*.png
 old.py
 
 # Distribution / packaging
@@ -62,6 +61,5 @@ Thumbs.db
 *.db
 
 # Runtime JSON files your app creates/uses
-inventory.json
 shopping_list.json
 

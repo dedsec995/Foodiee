@@ -1,0 +1,228 @@
+{
+    "items": {
+        "curdled milk": {
+            "quantity": "0",
+            "unit": "cup"
+        },
+        "curry": {
+            "quantity": "6.0",
+            "unit": "tsp"
+        },
+        "garam masala": {
+            "quantity": "0",
+            "unit": "tsp"
+        },
+        "ghee": {
+            "quantity": "10.0",
+            "unit": "tbsp"
+        },
+        "ginger": {
+            "quantity": "9.5",
+            "unit": "tsp/inch"
+        },
+        "paneer": {
+            "quantity": "0",
+            "unit": "g"
+        },
+        "spinach": {
+            "quantity": "7",
+            "unit": "cup/bunch"
+        },
+        "butter": {
+            "quantity": "1.0",
+            "unit": "tbsp"
+        },
+        "coriander powder": {
+            "quantity": "0",
+            "unit": "tsp"
+        },
+        "cumin seeds": {
+            "quantity": "0",
+            "unit": "tsp"
+        },
+        "garlic": {
+            "quantity": "0",
+            "unit": "cloves"
+        },
+        "green chilies": {
+            "quantity": "4.0",
+            "unit": "tsp"
+        },
+        "onions": {
+            "quantity": "0.0",
+            "unit": "medium"
+        },
+        "tomatoes": {
+            "quantity": "4.0",
+            "unit": "cup"
+        },
+        "water": {
+            "quantity": "2.5",
+            "unit": "cup"
+        },
+        "Curd": {
+            "quantity": "2.0",
+            "unit": "cup"
+        },
+        "Curry": {
+            "quantity": "4",
+            "unit": "tsp"
+        },
+        "Garam Masala": {
+            "quantity": "4",
+            "unit": "tsp"
+        },
+        "Ginger": {
+            "quantity": "2.0",
+            "unit": "tbsp"
+        },
+        "Oil": {
+            "quantity": "4.0",
+            "unit": "tbsp"
+        },
+        "Paneer": {
+            "quantity": "1500",
+            "unit": "g"
+        },
+        "Spinach": {
+            "quantity": "8",
+            "unit": "cup"
+        },
+        "Coriander Powder": {
+            "quantity": "2.0",
+            "unit": "tsp"
+        },
+        "Cumin Powder": {
+            "quantity": "2.0",
+            "unit": "tsp"
+        },
+        "Fresh Spinach": {
+            "quantity": "4.0",
+            "unit": "cup"
+        },
+        "Garlic": {
+            "quantity": "4.0",
+            "unit": "cloves"
+        },
+        "Ghee or Oil": {
+            "quantity": "4.0",
+            "unit": "tbsp"
+        },
+        "Onion": {
+            "quantity": "1.0",
+            "unit": "medium"
+        },
+        "Red Chili Powder": {
+            "quantity": "1.0",
+            "unit": "tsp"
+        },
+        "Turmeric Powder": {
+            "quantity": "1.0",
+            "unit": "tsp"
+        },
+        "Water": {
+            "quantity": "2.0",
+            "unit": "cup"
+        },
+        "chiles": {
+            "quantity": "1.0",
+            "unit": "medium"
+        },
+        "curdled milk cheese": {
+            "quantity": "4",
+            "unit": "cup/g"
+        },
+        "garam masala powder": {
+            "quantity": "1.0",
+            "unit": "tsp"
+        },
+        "oil": {
+            "quantity": "0",
+            "unit": "tbsp"
+        },
+        "all-purpose flour": {
+            "quantity": "4.0",
+            "unit": "tbsp"
+        },
+        "curry powder": {
+            "quantity": "0",
+            "unit": "tsp"
+        },
+        "heavy cream": {
+            "quantity": "0",
+            "unit": "cup"
+        },
+        "Curdled Milk": {
+            "quantity": "2.0",
+            "unit": "cup"
+        },
+        "curd": {
+            "quantity": "0",
+            "unit": "cup"
+        },
+        "baking powder": {
+            "quantity": "2.5",
+            "unit": "tsp"
+        },
+        "baking soda": {
+            "quantity": "1.5",
+            "unit": "tsp"
+        },
+        "buttermilk": {
+            "quantity": "0.5",
+            "unit": "cup"
+        },
+        "confectioners' sugar": {
+            "quantity": "3.5",
+            "unit": "cup"
+        },
+        "large eggs": {
+            "quantity": "2.0",
+            "unit": ""
+        },
+        "red food coloring": {
+            "quantity": "2.5",
+            "unit": "tbsp"
+        },
+        "salt": {
+            "quantity": "1.0",
+            "unit": "tsp"
+        },
+        "unsalted butter, softened": {
+            "quantity": "2.5",
+            "unit": "cup"
+        },
+        "vanilla extract": {
+            "quantity": "2.5",
+            "unit": "tsp"
+        },
+        "cocoa powder": {
+            "quantity": "0",
+            "unit": "tbsp"
+        },
+        "eggs": {
+            "quantity": "0.0",
+            "unit": ""
+        },
+        "flour": {
+            "quantity": "1.0",
+            "unit": "cup"
+        },
+        "unsalted butter": {
+            "quantity": "1.0",
+            "unit": "cup"
+        },
+        "granulated sugar": {
+            "quantity": "1.5",
+            "unit": "cup"
+        },
+        "olive oil": {
+            "quantity": "2",
+            "unit": "tbsp"
+        },
+        "unsweetened cocoa powder": {
+            "quantity": "2.0",
+            "unit": "tbsp"
+        }
+    }
+}
