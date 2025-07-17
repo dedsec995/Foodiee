@@ -5,7 +5,7 @@ import json
 from typing import Annotated, List, TypedDict
 
 from langchain_core.messages import BaseMessage, ToolMessage
-from langchain_core.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 from langchain_groq import ChatGroq
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.sqlite import SqliteSaver
@@ -29,17 +29,12 @@ class Recipe(BaseModel):
     ingredients: dict = Field(description="A dictionary of ingredients and their quantities.")
     instructions: List[str] = Field(description="A list of instructions for the recipe.")
 
-class ShoppingList(BaseModel):
-    """Represents a shopping list with formatted items."""
-    shopping_list: dict = Field(description="A dictionary of missing items with their quantities and units, e.g. {'flour': {'quantity': 500, 'unit': 'g'}}")
-
 
 # ------------------ STATE ------------------
 
 class AgentState(TypedDict):
     messages: Annotated[List[BaseMessage], lambda x, y: x + y]
     inventory: dict
-    shopping_list: dict
     servings: int
 
 # ------------------ NODES ------------------
@@ -48,14 +43,43 @@ def recipe_fetcher(state: AgentState):
     """Fetches a recipe based on the user's request."""
     search = DuckDuckGoSearchRun()
     dish_query = state["messages"][0]
-    search_results = search.run(f"recipe for {dish_query}")
+    search_results = search.run(f"recipe for {dish_query} for 2 serving")
 
-    prompt = f"""Based on the following search results, please provide a recipe.
-Search results:
-{search_results}
+    prompt = f"""
+        You are a culinary assistant. Your task is to output a standardized recipe JSON with normalized units.
 
-User's request: {dish_query}
-"""
+        - Normalize all measurements to the following units wherever applicable:
+        - "tsp" for teaspoons (e.g., "tsp", "teaspoon", "tsp.")
+        - "tbsp" for tablespoons (e.g., "tbsp", "tablespoon", "tbsp.")
+        - "g" for grams
+        - "kg" for kilograms
+        - "ml" for milliliters
+        - "l" for liters
+        - "cup" for cups
+        - Keep subjective quantities as-is (e.g., "pinch", "to taste", "bunch")
+
+        - If you encounter synonyms or abbreviations, convert them to the standardized units above.
+
+        - Ingredients should be presented as a JSON dictionary with ingredient names as keys and each value an object with "quantity" (string) and "unit" (string).
+
+        - Example input variations:
+        - "1 tsp", "1 teaspoon", "1 tsp." => standardize as {{"quantity": "1", "unit": "tsp"}}
+        - "2 tablespoons", "2 tbsp" => standardize as {{"quantity": "2", "unit": "tbsp"}}
+
+        - The output must be a valid JSON object containing "ingredients" and "instructions" fields.
+
+        ---
+
+        Based on the following search results, please provide a recipe for 2 servings.
+
+        Search results:
+        {search_results}
+
+        User's request:
+        {dish_query}
+
+        Give detailed instructions.
+    """
 
     llm_with_tools = llm.bind_tools([Recipe])
     response = llm_with_tools.invoke(prompt)
@@ -85,60 +109,85 @@ def inventory_manager(state: AgentState):
     return state
 
 def recipe_scaler(state: AgentState):
-    """Scales the recipe based on the number of servings."""
-    recipe_tool_call = state["messages"][-1].tool_calls[0]
-    recipe = recipe_tool_call["args"]
-    servings = state["servings"]
+    """Scales the recipe intelligently based on servings and inventory."""
+    
+    recipe_tool_call = None
+    for msg in reversed(state["messages"]):
+        if hasattr(msg, "tool_calls") and msg.tool_calls:
+            recipe_tool_call = msg.tool_calls[0]
+            break
+    if recipe_tool_call is None:
+        raise ValueError("No tool call found in messages for scaling recipe.")
 
-    # Create a new dictionary for the scaled recipe
+    recipe = recipe_tool_call["args"]
+    servings = int(state["servings"])
+    inventory = state.get("inventory", {}).get("items", {})
+
     scaled_recipe = recipe.copy()
     scaled_ingredients = {}
 
-    for ingredient, quantity in recipe["ingredients"].items():
-        # Extract the numerical part of the quantity
-        parts = quantity.split()
-        if len(parts) > 0 and parts[0].isdigit():
-            amount = int(parts[0])
-            scaled_amount = amount * servings
-            scaled_ingredients[ingredient] = f"{scaled_amount} {' '.join(parts[1:])}"
+    # Units that probably shouldn't be scaled but just copied (e.g. subjective units)
+    non_scalable_units = {"to taste", "", "bunch", "medium", "pinch"}
+
+    for ingredient, info in recipe["ingredients"].items():
+        qty = info.get("quantity")
+        unit = info.get("unit", "").lower()
+
+        # Check if quantity is numeric
+        try:
+            amount = float(qty)
+        except (ValueError, TypeError):
+            # Non-numeric quantity
+            scaled_ingredients[ingredient] = info
+            continue
+
+        # Decide if we should scale this ingredient quantity
+        if unit in non_scalable_units:
+            # Do not scale subjective quantities, keep as is
+            scaled_amount = amount
         else:
-            scaled_ingredients[ingredient] = quantity # Keep as is if no numerical value
+            scaled_amount = amount * servings
+
+        # Optionally: check inventory and generate warning if insufficient
+        inv_item = inventory.get(ingredient)
+        if inv_item:
+            inv_quantity = inv_item.get("quantity", 0)
+            inv_unit = inv_item.get("unit", "").lower()
+
+            # Basic check if units match before comparing
+            if unit == inv_unit and isinstance(inv_quantity, (int, float)):
+                if scaled_amount > inv_quantity:
+                    print(f"Warning: Insufficient '{ingredient}' in inventory for {servings} servings.")
+            else:
+                # Units don't match, skipping inventory quantity check here
+                pass
+        else:
+            # Ingredient not found in inventory - optional warning
+            print(f"Warning: Ingredient '{ingredient}' not found in inventory.")
+
+        scaled_ingredients[ingredient] = {
+            "quantity": str(scaled_amount) if scaled_amount % 1 else str(int(scaled_amount)),
+            "unit": unit
+        }
 
     scaled_recipe["ingredients"] = scaled_ingredients
-    state["messages"].append(ToolMessage(tool_call_id=recipe_tool_call["id"], content=json.dumps({"scaled_recipe": scaled_recipe})))
+
+    # Append new scaled recipe as a ToolMessage
+    state["messages"].append(
+        ToolMessage(
+            tool_call_id=recipe_tool_call["id"],
+            content=json.dumps({"scaled_recipe": scaled_recipe})
+        )
+    )
     return state
 
-
-def shopping_list_manager(state: AgentState):
-    """Creates a shopping list of missing ingredients."""
-    last_message = state["messages"][-1]
-    missing_items_data = json.loads(last_message.content)
-    missing_items = missing_items_data["missing_items"]
-
-    llm_with_tools = llm.bind_tools([ShoppingList])
-    prompt = f"Please format the following list of missing ingredients into a structured shopping list with quantities and units. For each item, separate the quantity and the unit. If you can't determine a quantity or unit, you can make a reasonable assumption or leave it as a string. Missing items: {json.dumps(missing_items)}"
-    response = llm_with_tools.invoke(prompt)
-    state["messages"].append(response)
-
-    shopping_list_tool_call = response.tool_calls[0]
-    formatted_shopping_list = shopping_list_tool_call["args"]["shopping_list"]
-
-    with open("shopping_list.json", "w") as f:
-        json.dump(formatted_shopping_list, f, indent=4)
-
-    state["shopping_list"] = formatted_shopping_list
-    return state
 
 def printer(state: AgentState):
     """Prints the final output."""
-    if state.get("shopping_list"):
-        print("\nShopping list created in shopping_list.json")
-        print(json.dumps(state["shopping_list"], indent=4))
-    else:
-        last_message = state["messages"][-1]
-        recipe_data = json.loads(last_message.content)
-        print("\nRecipe:")
-        print(json.dumps(recipe_data.get("scaled_recipe", recipe_data.get("recipe")), indent=4))
+    last_message = state["messages"][-1]
+    recipe_data = json.loads(last_message.content)
+    print("\nRecipe:")
+    print(json.dumps(recipe_data.get("scaled_recipe", recipe_data.get("recipe")), indent=4))
 
 # ------------------ GRAPH ------------------
 
@@ -147,29 +196,15 @@ workflow = StateGraph(AgentState)
 workflow.add_node("recipe_fetcher", recipe_fetcher)
 workflow.add_node("inventory_manager", inventory_manager)
 workflow.add_node("recipe_scaler", recipe_scaler)
-workflow.add_node("shopping_list_manager", shopping_list_manager)
 workflow.add_node("printer", printer)
 
 
 workflow.set_entry_point("recipe_fetcher")
 
 workflow.add_edge("recipe_fetcher", "inventory_manager")
-workflow.add_edge("shopping_list_manager", "printer")
+workflow.add_edge("inventory_manager", "recipe_scaler")
 workflow.add_edge("recipe_scaler", "printer")
 workflow.add_edge("printer", END)
-
-
-def should_continue(state: AgentState):
-    if "missing_items" in state["messages"][-1].content:
-        return "shopping_list_manager"
-    else:
-        return "recipe_scaler"
-
-workflow.add_conditional_edges(
-    "inventory_manager",
-    should_continue,
-    {"shopping_list_manager": "shopping_list_manager", "recipe_scaler": "recipe_scaler"}
-)
 
 # ------------------ MAIN ------------------
 
@@ -182,8 +217,8 @@ def main():
 
         config = {"configurable": {"thread_id": "1"}}
 
-        dish = input("What dish would you like to cook? ")
-        servings = int(input("How many servings? "))
+        dish = "palak paneer"
+        servings = "6"
 
         initial_state = {
             "messages": [f"Prepare a recipe for {dish}."],
